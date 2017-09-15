@@ -1,2 +1,2 @@
-# data-science
+# Practical Machine Learning
 Exercises Data Science St Johns
