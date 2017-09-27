@@ -1,0 +1,94 @@
+---
+title: "Predicting with trees, Random Forests, & Model Based Predictions"
+author: "Frank Hettmer"
+date: "26 September 2017"
+output: html_document
+---
+#Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. We are thanking the involved cooperations for letting us use these data.
+
+#Data
+The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+#Download libraries to be used
+
+```{r }
+library(ElemStatLearn)
+library(caret)
+library(rpart)
+library(randomForest)
+library(RCurl)
+library(Matrix)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+```
+#Download Data files
+```{r}
+
+fileUrl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(fileUrl, destfile = "pmltraining.csv")
+training<-read.csv("pmltraining.csv", header=TRUE, na.strings=c("NA",""))
+
+fileUrl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(fileUrl, destfile = "pmltesting.csv")
+testing<-read.csv("pmltesting.csv", header=TRUE, na.strings=c("NA",""))
+
+```
+
+#Exploring the training set and choosing the columns needed for the analysis.
+```{r}
+colnames<-names(training)
+colindex<-grep("^accel", colnames)
+colclasse<-grep("classe", colnames)
+training<-training[,c(40,41,42,63,64,65,116,117,118,154,155,156,160)]
+testing<-testing[,c(40,41,42,63,64,65,116,117,118,154,155,156,160)]
+sum(is.na(training))   
+```
+No empty data fields are used for the analysis.
+#Setup Training and validation sets. Since the data set is large (about 20.000 rows), 25% is for validation.
+```{r}
+set.seed(2014)
+inTrain<-createDataPartition(y=training$classe, p=0.75, list = FALSE)
+train<-training[inTrain,]
+validating<-training[-inTrain,]
+```
+
+# Plotting predictors
+The predictors are plot before the next steps
+```{r pressure, echo=TRUE}
+summary(training)
+featurePlot(x=training[,c(1:12)], y=training$classe)
+boxplot(training[1:12],training$classe,data=training)
+corMatrix <- cor(training[1:12])
+```
+#Training the model based on the random forrest methode
+```{r}
+modFit<-train(classe~.,data=training,method="rf")
+modFit$finalModel
+```
+
+#Testing the model based on the training model with the testing set
+```{r}
+prediction <- predict(modFit, validating)
+```
+#Make confusion matrix to check quality
+```{r}
+confusionMatrix(prediction, validating$classe)
+```
+
+#Training the model based on the Model Decision Trees
+```{r}
+treemodFit<-train(classe~.,data=training,method="rpart")
+treemodFit$finalModel
+predictionTree <- predict(treemodFit, validating)
+confusionMatrix(predictionTree, validating$classe)
+```
+#Prediction with rf Methode
+```{r}
+prediction <- predict(modFit, testing)
+```
+As can be seen from the confusion matrix the Random Forest model is very accurate. Because of that we could expect nearly all of the submitted test cases to be correct. It turned out they were all correct.
